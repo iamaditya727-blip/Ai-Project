@@ -10,21 +10,27 @@ app.use(express.json());
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
+// Debug: confirm API key is loaded (DO NOT expose in production logs later)
+console.log("🔑 GROQ KEY LOADED:", process.env.GROQ_API_KEY ? "YES" : "NO");
+
 app.post("/generate-plan", async (req, res) => {
   try {
-    const { name, department, scenario, observation } = req.body;
-
+    console.log("🔥 ROUTE HIT");
     console.log("📩 REQUEST:", req.body);
 
+    const { name, department, scenario, observation } = req.body;
+
     const prompt = `
-Create a professional performance report for a student.
+You are a senior organisational psychologist and executive coach.
+
+Return a structured professional report.
 
 Name: ${name}
 Department: ${department}
 Scenario: ${scenario}
 Observation: ${observation}
 
-Structure:
+Format:
 1. Executive Summary
 2. Strengths
 3. Stress Behaviour Analysis
@@ -44,7 +50,8 @@ Structure:
         messages: [
           {
             role: "system",
-            content: "You are a professional HR and psychology performance analyst.",
+            content:
+              "You are a professional HR and psychology performance analyst.",
           },
           {
             role: "user",
@@ -57,33 +64,47 @@ Structure:
 
     const data = await response.json();
 
-    console.log("🤖 GROQ RESPONSE:", data);
+    console.log("🤖 GROQ RAW RESPONSE:", JSON.stringify(data, null, 2));
 
-    // error check
-    if (data.error) {
+    // HANDLE API ERRORS PROPERLY
+    if (!response.ok || data.error) {
+      console.log("❌ GROQ ERROR:", data);
       return res.json({
         success: false,
-        plan: data.error.message,
+        plan:
+          data?.error?.message ||
+          "Groq API failed (check model or API key)",
       });
     }
 
+    // SAFE EXTRACTION
     const aiText = data?.choices?.[0]?.message?.content;
+
+    if (!aiText) {
+      console.log("⚠️ NO AI TEXT FOUND:", data);
+      return res.json({
+        success: false,
+        plan: "AI returned empty response",
+      });
+    }
 
     return res.json({
       success: true,
-      plan: aiText || "No response from AI",
+      plan: aiText,
     });
 
   } catch (err) {
-    console.error("ERROR:", err);
+    console.error("💥 SERVER ERROR:", err);
 
     return res.status(500).json({
       success: false,
-      plan: "Server error",
+      plan: "Internal server error",
     });
   }
 });
 
-app.listen(3000, () => {
-  console.log("🚀 Server running on http://localhost:3000");
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
 });
