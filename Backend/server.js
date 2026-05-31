@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-
 dotenv.config();
 
 const app = express();
@@ -9,8 +8,23 @@ app.use(cors());
 app.use(express.json());
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
-
 console.log("🔑 GROQ KEY LOADED:", process.env.GROQ_API_KEY ? "YES" : "NO");
+
+function cleanMarkdown(text) {
+  return text
+    .replace(/^#{1,6}\s+/gm, "")
+    .replace(/\*{1,3}([^*]+)\*{1,3}/g, "$1")
+    .replace(/_{1,3}([^_]+)_{1,3}/g, "$1")
+    .replace(/^[-*+]\s+/gm, "")
+    .replace(/^\d+\.\s+/gm, "")
+    .replace(/^>\s+/gm, "")
+    .replace(/`{1,3}([^`]*)`{1,3}/g, "$1")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/^-{3,}$/gm, "")
+    .replace(/Box \d+:\s*/gi, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
 
 app.post("/generate-plan", async (req, res) => {
   try {
@@ -22,7 +36,14 @@ app.post("/generate-plan", async (req, res) => {
     const prompt = `
 You are a senior organisational psychologist and executive coach specialising in Industrial-Organizational (I-O) Psychology and Cognitive Behavioral Techniques (CBT).
 
-A student has just completed an industry stress simulation. Generate a structured professional development report in exactly the following format:
+A student has just completed an industry stress simulation. Generate a structured professional development report using the exact format below.
+
+CRITICAL FORMATTING RULES — you must follow these without exception:
+- Do not use any markdown whatsoever. No asterisks, no hashes, no dashes, no bullet points, no numbered lists, no bold, no italics.
+- Do not use the words "Box 1", "Box 2", or "Box 3" anywhere.
+- Do not use any symbols such as *, **, #, -, --, or >.
+- Write all content in clean, flowing prose paragraphs only.
+- Use the section labels exactly as shown below, followed by a colon, then write the content on the next line as plain prose.
 
 Name: ${name}
 Department: ${department}
@@ -33,41 +54,49 @@ Mentor Observation: ${observation}
 
 Real-Time AI Analysis
 
-Upon submission, the AI generates targeted developmental interventions using Cognitive Behavioral Techniques (CBT) and principles from Industrial-Organizational (I-O) Psychology. Simulations are tailored to disciplines such as Human Resource Management, Business & Finance Management, Law, Psychology, Civic & Political Science, and Marketing.
+Upon submission, the AI generates targeted developmental interventions using Cognitive Behavioral Techniques (CBT) and principles from Industrial-Organizational (I-O) Psychology.
 
 ---
 
-Box 1: Cognitive Reframing & Professional Identity Development
+Cognitive Reframing and Professional Identity Development
 
 Goal: Transition from a Student Mindset to a Professional Decision-Maker Mindset.
 
-Cognitive Reframing Analysis: [Analyse whether ${name} approached the simulation as an academic exercise or as a real-world professional challenge. Did they rely on theoretical knowledge alone, or did they apply practical reasoning and contextual awareness? Be specific to the scenario and observation provided.]
+Cognitive Reframing Analysis:
+[Write 3 to 4 sentences of flowing prose analysing whether ${name} approached the simulation as an academic exercise or as a real-world professional challenge. Reference the scenario and observation directly. No bullet points.]
 
-Developmental Interventions: [Provide 3 targeted, specific growth actions to strengthen ${name}'s professional identity, reduce industry dysmorphia, and build confidence in applying ${department} knowledge to real-world scenarios.]
+Developmental Interventions:
+[Write 3 to 4 sentences of flowing prose describing targeted growth actions to strengthen ${name}'s professional identity, reduce industry dysmorphia, and build confidence in applying ${department} knowledge. No bullet points or numbered lists.]
 
 ---
 
-Box 2: Behavioral Analysis & Performance Readiness
+Behavioural Analysis and Performance Readiness
 
 Goal: Transition from subject competence to professional effectiveness.
 
-**Behavioral Performance Audit:** [Assess ${name}'s communication clarity, analytical reasoning, decision-making quality, stakeholder awareness, and listening accuracy based on the observation provided. Be direct and specific.]
+Behavioural Performance Audit:
+[Write 3 to 4 sentences of flowing prose assessing ${name}'s communication clarity, analytical reasoning, decision-making quality, stakeholder awareness, and listening accuracy based on the observation provided. No bullet points.]
 
-**Applied Competency Mapping:** [Identify 2-3 observable behaviors or decisions demonstrated during the simulation that ${name} can translate into interview narratives, professional portfolios, or workplace performance examples.]
+Applied Competency Mapping:
+[Write 3 to 4 sentences of flowing prose identifying observable behaviours or decisions from the simulation that ${name} can translate into interview narratives, professional portfolios, or workplace examples. No bullet points.]
 
-**Performance Interventions:** [Provide 3 personalised recommendations to improve ${name}'s execution, influence, adaptability, and professional presence within ${department}.]
+Performance Interventions:
+[Write 3 to 4 sentences of flowing prose providing personalised recommendations to improve ${name}'s execution, influence, adaptability, and professional presence within ${department}. No bullet points.]
 
 ---
 
-Box 3: Emotional Intelligence & Pressure Adaptability
+Emotional Intelligence and Pressure Adaptability
 
 Goal: Evaluate the student's ability to perform under pressure.
 
-Emotional Response Analysis: [Analyse whether ${name}'s decision-making was influenced by fear, uncertainty, or cognitive distortions — or guided by emotional intelligence, evidence-based reasoning, and situational awareness. Reference the scenario and observation directly.]
+Emotional Response Analysis:
+[Write 3 to 4 sentences of flowing prose analysing whether ${name}'s decision-making was influenced by fear, uncertainty, or cognitive distortions, or guided by emotional intelligence and situational awareness. Reference the scenario and observation directly. No bullet points.]
 
-Pressure Adaptability Score: [Give a score out of 10 and justify it. Assess resilience, stress tolerance, and performance consistency under the conditions of the scenario.]
+Pressure Adaptability Score:
+[Give a score out of 10 and write 2 to 3 sentences justifying it based on resilience, stress tolerance, and performance consistency. No bullet points.]
 
-Growth Actions: [Provide 3 targeted interventions to strengthen ${name}'s emotional regulation, psychological resilience, confidence under pressure, and adaptive decision-making in ${department} environments.]
+Growth Actions:
+[Write 3 to 4 sentences of flowing prose describing targeted interventions to strengthen ${name}'s emotional regulation, psychological resilience, and adaptive decision-making in ${department} environments. No bullet points.]
 `;
 
     const response = await fetch(GROQ_URL, {
@@ -81,7 +110,8 @@ Growth Actions: [Provide 3 targeted interventions to strengthen ${name}'s emotio
         messages: [
           {
             role: "system",
-            content: "You are a professional organisational psychologist and executive coach. Always respond in the exact structured format provided. Be specific, insightful, and personalised — never generic.",
+            content:
+              "You are a professional organisational psychologist and executive coach. Always respond using the exact structured format provided. Write only in clean prose paragraphs. Do not use markdown, asterisks, hashes, bullet points, numbered lists, or any special formatting characters. Be specific, insightful, and personalised.",
           },
           {
             role: "user",
@@ -93,7 +123,6 @@ Growth Actions: [Provide 3 targeted interventions to strengthen ${name}'s emotio
     });
 
     const data = await response.json();
-
     console.log("🤖 GROQ RAW RESPONSE:", JSON.stringify(data, null, 2));
 
     if (!response.ok || data.error) {
@@ -114,11 +143,12 @@ Growth Actions: [Provide 3 targeted interventions to strengthen ${name}'s emotio
       });
     }
 
+    const cleanedPlan = cleanMarkdown(aiText);
+
     return res.json({
       success: true,
-      plan: aiText,
+      plan: cleanedPlan,
     });
-
   } catch (err) {
     console.error("💥 SERVER ERROR:", err);
     return res.status(500).json({
@@ -129,7 +159,6 @@ Growth Actions: [Provide 3 targeted interventions to strengthen ${name}'s emotio
 });
 
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
 });
