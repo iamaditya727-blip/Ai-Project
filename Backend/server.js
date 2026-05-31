@@ -23,6 +23,8 @@ function cleanMarkdown(text) {
     .replace(/^-{3,}$/gm, "")
     .replace(/Box \d+:\s*/gi, "")
     .replace(/\n{3,}/g, "\n\n")
+    .replace(/^Goal:.*$/gm, "")
+    .replace(/^Upon submission.*$/gm, "")
     .trim();
 }
 
