@@ -10,7 +10,6 @@ app.use(express.json());
 
 const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
 
-// Debug: confirm API key is loaded (DO NOT expose in production logs later)
 console.log("🔑 GROQ KEY LOADED:", process.env.GROQ_API_KEY ? "YES" : "NO");
 
 app.post("/generate-plan", async (req, res) => {
@@ -21,22 +20,54 @@ app.post("/generate-plan", async (req, res) => {
     const { name, department, scenario, observation } = req.body;
 
     const prompt = `
-You are a senior organisational psychologist and executive coach.
+You are a senior organisational psychologist and executive coach specialising in Industrial-Organizational (I-O) Psychology and Cognitive Behavioral Techniques (CBT).
 
-Return a structured professional report.
+A student has just completed an industry stress simulation. Generate a structured professional development report in exactly the following format:
 
 Name: ${name}
 Department: ${department}
 Scenario: ${scenario}
-Observation: ${observation}
+Mentor Observation: ${observation}
 
-Format:
-1. Executive Summary
-2. Strengths
-3. Stress Behaviour Analysis
-4. Weaknesses
-5. Improvement Plan
-6. Final Recommendation
+---
+
+### Real-Time AI Analysis
+
+Upon submission, the AI generates targeted developmental interventions using Cognitive Behavioral Techniques (CBT) and principles from Industrial-Organizational (I-O) Psychology. Simulations are tailored to disciplines such as Human Resource Management, Business & Finance Management, Law, Psychology, Civic & Political Science, and Marketing.
+
+---
+
+#### Box 1: Cognitive Reframing & Professional Identity Development
+
+**Goal:** Transition from a Student Mindset to a Professional Decision-Maker Mindset.
+
+**Cognitive Reframing Analysis:** [Analyse whether ${name} approached the simulation as an academic exercise or as a real-world professional challenge. Did they rely on theoretical knowledge alone, or did they apply practical reasoning and contextual awareness? Be specific to the scenario and observation provided.]
+
+**Developmental Interventions:** [Provide 3 targeted, specific growth actions to strengthen ${name}'s professional identity, reduce industry dysmorphia, and build confidence in applying ${department} knowledge to real-world scenarios.]
+
+---
+
+#### Box 2: Behavioral Analysis & Performance Readiness
+
+**Goal:** Transition from subject competence to professional effectiveness.
+
+**Behavioral Performance Audit:** [Assess ${name}'s communication clarity, analytical reasoning, decision-making quality, stakeholder awareness, and listening accuracy based on the observation provided. Be direct and specific.]
+
+**Applied Competency Mapping:** [Identify 2-3 observable behaviors or decisions demonstrated during the simulation that ${name} can translate into interview narratives, professional portfolios, or workplace performance examples.]
+
+**Performance Interventions:** [Provide 3 personalised recommendations to improve ${name}'s execution, influence, adaptability, and professional presence within ${department}.]
+
+---
+
+#### Box 3: Emotional Intelligence & Pressure Adaptability
+
+**Goal:** Evaluate the student's ability to perform under pressure.
+
+**Emotional Response Analysis:** [Analyse whether ${name}'s decision-making was influenced by fear, uncertainty, or cognitive distortions — or guided by emotional intelligence, evidence-based reasoning, and situational awareness. Reference the scenario and observation directly.]
+
+**Pressure Adaptability Score:** [Give a score out of 10 and justify it. Assess resilience, stress tolerance, and performance consistency under the conditions of the scenario.]
+
+**Growth Actions:** [Provide 3 targeted interventions to strengthen ${name}'s emotional regulation, psychological resilience, confidence under pressure, and adaptive decision-making in ${department} environments.]
 `;
 
     const response = await fetch(GROQ_URL, {
@@ -50,8 +81,7 @@ Format:
         messages: [
           {
             role: "system",
-            content:
-              "You are a professional HR and psychology performance analyst.",
+            content: "You are a professional organisational psychologist and executive coach. Always respond in the exact structured format provided. Be specific, insightful, and personalised — never generic.",
           },
           {
             role: "user",
@@ -66,18 +96,14 @@ Format:
 
     console.log("🤖 GROQ RAW RESPONSE:", JSON.stringify(data, null, 2));
 
-    // HANDLE API ERRORS PROPERLY
     if (!response.ok || data.error) {
       console.log("❌ GROQ ERROR:", data);
       return res.json({
         success: false,
-        plan:
-          data?.error?.message ||
-          "Groq API failed (check model or API key)",
+        plan: data?.error?.message || "Groq API failed (check model or API key)",
       });
     }
 
-    // SAFE EXTRACTION
     const aiText = data?.choices?.[0]?.message?.content;
 
     if (!aiText) {
@@ -95,7 +121,6 @@ Format:
 
   } catch (err) {
     console.error("💥 SERVER ERROR:", err);
-
     return res.status(500).json({
       success: false,
       plan: "Internal server error",
